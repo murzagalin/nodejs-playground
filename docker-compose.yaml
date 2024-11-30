@@ -1,0 +1,12 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment: 
+      POSTGRES_PASSWORD: pass123
+      POSTGRES_USER: user123
+      POSTGRES_DB: db123
+  app:
+    image: playground-server-app
+    ports: 
+      - 13000:3000
+    

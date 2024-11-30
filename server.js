@@ -1,6 +1,6 @@
 const express = require('express')
 const pool = require('./db')
-const port = 1337
+const port = 3000
 
 const app = express()
 app.use(express.json())
