@@ -1,6 +1,24 @@
 const express = require('express')
+const amqplib = require('amqplib');
+
 const pool = require('./db')
 const port = 3000
+
+const amqpUrl = 'amqp://guest:guest@rabbitmq';
+let connection;
+let channel;
+const exchange = 'user.signed_up';
+const queue = 'user.sign_up_name';
+const routingKey = 'sign_up_name';
+
+(async () => {
+    connection = await amqplib.connect(amqpUrl, 'heartbeat=60');
+    channel = await connection.createChannel();
+    
+    await channel.assertExchange(exchange, 'direct', {durable: true});
+    await channel.assertQueue(queue, {durable: true});
+    await channel.bindQueue(queue, exchange, routingKey);
+})();
 
 const app = express()
 app.use(express.json())
@@ -20,7 +38,18 @@ app.post('/', async (req, res) => {
     const { name, location } = req.body
 
     try {
-        await pool.query('INSERT INTO schools(name, address) VALUES ($1, $2)', [name, location] )
+        
+        try {
+            console.log('Saving to db');
+            await pool.query('INSERT INTO schools(name, address) VALUES ($1, $2)', [name, location] )
+            console.log('Publishing');
+            const msg = {'id': Math.floor(Math.random() * 1000), 'name': name };
+            await channel.publish(exchange, routingKey, Buffer.from(JSON.stringify(msg)), {persistent: true});
+            console.log('Message published');
+        } catch(e) {
+            console.error('Error in publishing message', e);
+        } 
+
         res.status(200).send({
             message: "Successfuly added a child"
         })

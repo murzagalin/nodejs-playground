@@ -1,4 +1,20 @@
 services:
+  rabbitmq:
+    image: rabbitmq:4.0-management-alpine
+    container_name: 'rabbitmq'
+    ports:
+        # AMQP protocol port
+        - 5673:5672
+        # HTTP management UI
+        - 15673:15672
+    volumes:
+        - ~/.docker-conf/rabbitmq/data/:/var/lib/rabbitmq/
+        - ~/.docker-conf/rabbitmq/log/:/var/log/rabbitmq
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 30s
+      retries: 3
   db:
     image: postgres:17-alpine
     environment: 
@@ -9,4 +25,11 @@ services:
     image: playground-server-app
     ports: 
       - 13000:3000
-    
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+  consumer:
+    image: playground-consumer-app
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
